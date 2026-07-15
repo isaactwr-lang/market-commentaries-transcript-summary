@@ -2,4 +2,5 @@
 
 CHANNELS = [
     {"name": "Macro Voices", "channel_id": "UCICRehoZjq3ZtAWgRJX118A"},
+    {"name": "Goldman Sachs", "channel_id": "UCyz6-taovlaOkPsPtK4KNEg"},
 ]

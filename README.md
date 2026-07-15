@@ -1,8 +1,9 @@
 # market-commentaries-transcript-summary
 
 Checks a configurable list of YouTube channels daily (currently
-[MacroVoices](https://www.youtube.com/@macrovoices7508)). When any channel posts a new video,
-fetches its transcript and emails it.
+[MacroVoices](https://www.youtube.com/@macrovoices7508) and
+[Goldman Sachs](https://www.youtube.com/@GoldmanSachs)). When any channel posts a new video that's
+judged market-related, fetches its transcript and emails it.
 
 ## How it works
 
@@ -12,10 +13,18 @@ fetches its transcript and emails it.
    to track additional channels — no other code changes needed.
 3. For each channel, the script reads its YouTube RSS feed (no API key needed) and compares the
    latest video ID against that channel's entry in `data/last_video.json`.
-4. If it's new, it fetches the transcript with `youtube-transcript-api` and emails it via Gmail
-   SMTP (`shared/email_sender.py`, same pattern as `ai-momentum`/`weekly-market-recap`).
-5. The workflow commits the updated `data/last_video.json` back to the repo so state persists
+4. If it's new, `shared/relevance.py` asks an LLM (Groq, same provider as `ai-momentum`) whether
+   the video's title/description is market/investing-related — this matters for channels like
+   Goldman Sachs that also post careers, philanthropy, or brand content mixed in with market
+   commentary. Non-market videos are skipped (no email), but still marked as seen.
+5. If it's new and market-related, it fetches the transcript with `youtube-transcript-api` and
+   emails it via Gmail SMTP (`shared/email_sender.py`, same pattern as
+   `ai-momentum`/`weekly-market-recap`).
+6. The workflow commits the updated `data/last_video.json` back to the repo so state persists
    across runs. `data/last_video.json` maps `channel_id -> last_seen_video_id`.
+
+The relevance filter fails open: if `GROQ_API_KEY` is missing or the API call errors, the video
+is included rather than silently dropped.
 
 ### Adding a channel
 
@@ -25,6 +34,7 @@ to `CHANNELS` in `config/channels.py`:
 ```python
 CHANNELS = [
     {"name": "Macro Voices", "channel_id": "UCICRehoZjq3ZtAWgRJX118A"},
+    {"name": "Goldman Sachs", "channel_id": "UCyz6-taovlaOkPsPtK4KNEg"},
     {"name": "Some Other Channel", "channel_id": "UCxxxxxxxxxxxxxxxxxxxxxx"},
 ]
 ```
@@ -39,6 +49,7 @@ Set these in the repo's Settings → Secrets and variables → Actions (same val
 - `GMAIL_USER`
 - `GMAIL_APP_PASSWORD`
 - `RECIPIENT_EMAIL`
+- `GROQ_API_KEY` (for the market-relevance filter; also same value as `ai-momentum`)
 
 ## Known limitation: transcript fetching may get IP-blocked
 

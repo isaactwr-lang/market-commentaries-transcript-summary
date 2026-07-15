@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.channels import CHANNELS
 from shared.email_sender import send_email
+from shared.relevance import is_market_related
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ def _latest_video(channel_id: str) -> dict:
         "title": entry.title,
         "url": entry.link,
         "published": entry.published,
+        "description": getattr(entry, "summary", ""),
     }
 
 
@@ -86,10 +88,15 @@ def _check_channel(channel: dict, state: dict) -> None:
         return
 
     logger.info(f"[{name}] New video detected: {video['id']} — {video['title']}")
+    state[channel_id] = video["id"]  # advance regardless of relevance so we don't re-check it daily
+
+    if not is_market_related(video["title"], video["description"]):
+        logger.info(f"[{name}] Skipping (not market related): {video['title']}")
+        return
+
     transcript = _fetch_transcript(video["id"])
     subject, html = _build_email(name, video, transcript)
     send_email(subject, html)
-    state[channel_id] = video["id"]
 
 
 def main() -> None:
