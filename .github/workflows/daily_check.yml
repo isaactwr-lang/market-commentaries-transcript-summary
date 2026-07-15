@@ -2,7 +2,7 @@ name: Market Commentaries — Daily Video Check
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # 00:00 UTC = 08:00 SGT, daily
+    - cron: "5 0 * * *"   # 00:05 UTC = 08:05 SGT, daily (off :00 to avoid GitHub's busiest queue slot)
   workflow_dispatch:
 
 permissions:
