@@ -14,6 +14,7 @@ from config.channels import CHANNELS
 from shared.email_sender import send_email
 from shared.relevance import is_market_related
 from shared.summarize import summarize_transcript
+from shared.transcript import fetch_transcript
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -47,19 +48,6 @@ def _load_state() -> dict:
 
 def _save_state(state: dict) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
-
-
-def _fetch_transcript(video_id: str) -> str | None:
-    # YouTube blocks most cloud-provider IPs (incl. GitHub Actions runners) from
-    # this endpoint — see IP-ban note in youtube-transcript-api's README. When
-    # blocked we fall back to a transcript-unavailable email rather than failing.
-    try:
-        from youtube_transcript_api import YouTubeTranscriptApi
-        transcript = YouTubeTranscriptApi().fetch(video_id)
-        return "\n".join(snippet.text for snippet in transcript)
-    except Exception as e:
-        logger.warning(f"Transcript fetch failed for {video_id}: {e}")
-        return None
 
 
 def _build_email(channel_name: str, video: dict, transcript: str | None) -> tuple[str, str]:
@@ -103,7 +91,7 @@ def _check_channel(channel: dict, state: dict) -> None:
         logger.info(f"[{name}] Skipping (not market related): {video['title']}")
         return
 
-    transcript = _fetch_transcript(video["id"])
+    transcript = fetch_transcript(video["id"])
     subject, html = _build_email(name, video, transcript)
     send_email(subject, html)
 
