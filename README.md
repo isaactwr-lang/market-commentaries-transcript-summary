@@ -3,7 +3,7 @@
 Checks a configurable list of YouTube channels daily (currently
 [MacroVoices](https://www.youtube.com/@macrovoices7508) and
 [Goldman Sachs](https://www.youtube.com/@GoldmanSachs)). When any channel posts a new video that's
-judged market-related, fetches its transcript and emails it.
+judged market-related, fetches its transcript, summarizes the key points, and emails the summary.
 
 ## How it works
 
@@ -17,14 +17,16 @@ judged market-related, fetches its transcript and emails it.
    the video's title/description is market/investing-related — this matters for channels like
    Goldman Sachs that also post careers, philanthropy, or brand content mixed in with market
    commentary. Non-market videos are skipped (no email), but still marked as seen.
-5. If it's new and market-related, it fetches the transcript with `youtube-transcript-api` and
-   emails it via Gmail SMTP (`shared/email_sender.py`, same pattern as
+5. If it's new and market-related, it fetches the transcript with `youtube-transcript-api`,
+   summarizes it into 5-8 key-point bullets with Groq (`shared/summarize.py`), and emails the
+   summary via Gmail SMTP (`shared/email_sender.py`, same pattern as
    `ai-momentum`/`weekly-market-recap`).
 6. The workflow commits the updated `data/last_video.json` back to the repo so state persists
    across runs. `data/last_video.json` maps `channel_id -> last_seen_video_id`.
 
-The relevance filter fails open: if `GROQ_API_KEY` is missing or the API call errors, the video
-is included rather than silently dropped.
+Both the relevance filter and the summarizer fail open/gracefully: if `GROQ_API_KEY` is missing
+or a call errors, the relevance filter includes the video rather than dropping it, and the email
+falls back to the full raw transcript rather than sending nothing.
 
 ### Adding a channel
 

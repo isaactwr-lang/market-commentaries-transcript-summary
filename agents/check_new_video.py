@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.channels import CHANNELS
 from shared.email_sender import send_email
 from shared.relevance import is_market_related
+from shared.summarize import summarize_transcript
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -64,7 +65,15 @@ def _fetch_transcript(video_id: str) -> str | None:
 def _build_email(channel_name: str, video: dict, transcript: str | None) -> tuple[str, str]:
     subject = f"New {channel_name} video: {video['title']}"
     if transcript:
-        body_html = f"<pre style='white-space:pre-wrap;font-family:inherit'>{transcript}</pre>"
+        summary = summarize_transcript(video["title"], transcript)
+        if summary:
+            body_html = summary
+        else:
+            # Summarization couldn't run (no key / API error) — raw transcript beats no content.
+            body_html = (
+                "<p><em>Summary unavailable — showing full transcript instead.</em></p>"
+                f"<pre style='white-space:pre-wrap;font-family:inherit'>{transcript}</pre>"
+            )
     else:
         body_html = "<p><em>Transcript unavailable (YouTube likely blocked this server's IP). Use the link above to watch/read captions directly.</em></p>"
     html = (
